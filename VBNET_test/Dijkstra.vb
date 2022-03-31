@@ -2,9 +2,9 @@
 Imports System.Drawing
 
 Public Class Dijkstra
-    Dim random As New Random
+    Dim rand As New Random
     Dim myGraphics As Graphics = Me.CreateGraphics
-    Private Sub drawNode(ByVal thisNode As Node)
+    Private Sub DrawNode(ByVal thisNode As Node)
         Dim penNode As Pen
         penNode = New Pen(Drawing.Color.Maroon, 20)
         myGraphics.DrawRectangle(penNode, thisNode.X, thisNode.Y, 1, 1)
@@ -12,60 +12,40 @@ Public Class Dijkstra
         penNode.Dispose()
     End Sub
 
-    Private Sub drawEdge(ByVal source As Node, ByVal dest As Node)
+    Private Sub DrawEdge(ByVal thisEdge As Edge, ByVal color As Drawing.Color, ByVal width As Integer)
         Dim penEdge As Pen
-        penEdge = New Pen(Drawing.Color.Crimson, 5)
-        myGraphics.DrawLine(penEdge, x1:=source.X, y1:=source.Y, x2:=dest.X, y2:=dest.Y)
+        penEdge = New Pen(color, width)
+        myGraphics.DrawLine(penEdge, x1:=thisEdge.getA().X, y1:=thisEdge.getA().Y, x2:=thisEdge.getB().X, y2:=thisEdge.getB().Y)
         Threading.Thread.Sleep(100)
         penEdge.Dispose()
     End Sub
 
     Private Sub BtnStart_Click(sender As Object, e As EventArgs) Handles BtnStart.Click
         BtnStart.Hide()
-        Dim graph As New Graph
-        Dim numNodes As Integer = random.Next(4, 10)
-        Dim nodes(numNodes - 1) As Node
-        Dim source As Node
-        Dim dest As Node
-        Dim srcIndex, destIndex As Integer
-        Dim edges((numNodes * (numNodes - 1) / 2) - 1) As Edge
+        Dim numNodes As Integer = rand.Next(4, 10)
 
-        ' Create Nodes
-        For index As Integer = 0 To numNodes
-            Dim coordinateX As Integer = genRandCoord()
-            Dim coordinateY As Integer = genRandCoord()
-            Dim thisNode As New Node(coordinateX, coordinateY)
-            drawNode(thisNode)
-            nodes(index) = thisNode
+        Dim randomEdgeGraph As New Graph(numNodes)
+
+        For Each node In randomEdgeGraph.getNodes()
+            drawNode(node)
         Next
-
-        ' Create Edges
-        ' Max number of edges for undirected graph is  n(n-1)/2
-        ' How to add edges to graph?
-        Dim numEdges As Integer = edges.Length
-        For index As Integer = 0 To numNodes - 1
-            source = nodes(index)
-            srcIndex = index
-            dest = nodes(index + 1)
-            destIndex = index + 1
-            ' drawEdge(source, dest)
-            edges(index) = New Edge(source, dest, getDistanceToOrigin(source, dest), srcIndex, destIndex)
+        For Each edge In randomEdgeGraph.GetEdges()
+            DrawEdge(edge, Color.Crimson, 2)
         Next
-
-        graph = New Graph(nodes, edges)
 
         ' Dijkstra's Algorithm
 
+
+
+
+        For Each edge In randomEdgeGraph.GetEdges()
+            'DrawEdge(edge, Color.CornflowerBlue, 4)
+        Next
     End Sub
 
-    Private Function genRandCoord()
-        Dim MAX_NUM As Integer = 200
-        Return random.Next(1, MAX_NUM)
-    End Function
 
-    Private Function getDistanceToOrigin(origin As Node, thisNode As Node)
-        Return ((Math.Abs(thisNode.X - origin.X) ^ 2) + (Math.Abs(thisNode.Y - origin.Y) ^ 2)) ^ 2
-    End Function
+
+
 End Class
 
 
@@ -84,7 +64,7 @@ Public Class Edge
     Private B As Node
     Private AIndex As Integer
     Private BIndex As Integer
-    Private weight As Integer
+    Private weight As Double
     Public Sub New()
         Me.A = New Node(0, 0)
         Me.B = New Node(0, 0)
@@ -92,7 +72,7 @@ Public Class Edge
         Me.AIndex = 0
         Me.BIndex = 0
     End Sub
-    Public Sub New(ByVal A As Node, ByVal B As Node, ByVal weight As Integer)
+    Public Sub New(ByVal A As Node, ByVal B As Node, ByVal weight As Double)
         Me.A = A
         Me.B = B
         Me.weight = weight
@@ -100,7 +80,7 @@ Public Class Edge
         Me.BIndex = 0
     End Sub
 
-    Public Sub New(ByVal A As Node, ByVal B As Node, ByVal weight As Integer, ByVal srcIndex As Integer, ByVal destIndex As Integer)
+    Public Sub New(ByVal A As Node, ByVal B As Node, ByVal weight As Double, ByVal srcIndex As Integer, ByVal destIndex As Integer)
         Me.A = A
         Me.B = B
         Me.weight = weight
@@ -128,7 +108,7 @@ Public Class Edge
         Return Me.AIndex
     End Function
 
-    Public Sub setWeight(ByVal weight As Integer)
+    Public Sub setWeight(ByVal weight As Double)
         Me.weight = weight
     End Sub
 
@@ -151,19 +131,17 @@ Public Class Edge
 
 End Class
 Public Class Graph
+    Dim rand As New Random
     Private nodes() As Node
     Private edges() As Edge
     Private adjacencyMatrix(,) As Double
-    ' Possible bug: numNodes = nodes.Length - 1
-    Dim numNodes = nodes.Length
-    Dim numEdges = edges.Length
+    Dim numNodes = 0
+    Dim numEdges = 0
 
-    'Default Graph has 10 blank nodes
-    Public Sub New()
-        ' Max number of edges for undirected graph is  n(n-1)/2
-        ReDim nodes(9)
-        ReDim edges((numNodes * (numNodes - 1) / 2) - 1)
-        ReDim adjacencyMatrix(9, 9)
+    Public Sub New(ByVal numNodes As Integer)
+        nodes = GenerateNodes(numNodes)
+        ReDim adjacencyMatrix(numNodes - 1, numNodes - 1)
+        Me.numNodes = nodes.Length
 
         Dim x, y As Integer
         For x = 0 To numNodes - 1
@@ -171,13 +149,39 @@ Public Class Graph
                 adjacencyMatrix(x, y) = 0
             Next
         Next
-        numNodes = 0
+        Dim maxEdges As Integer = (numNodes * (numNodes - 1) / 2)
+        Dim minEdges As Integer = numNodes - 1
+        numEdges = rand.Next(minEdges, maxEdges)
+        ReDim edges(numEdges - 1)
+        edges = GenerateEdges()
+    End Sub
+
+    Public Sub New(ByVal nodes As Node())
+        Me.nodes = nodes
+        numNodes = nodes.Length
+        ReDim adjacencyMatrix(numNodes, numNodes)
+        Me.numNodes = nodes.Length
+
+        Dim x, y As Integer
+        For x = 0 To numNodes - 1
+            For y = 0 To numNodes - 1
+                adjacencyMatrix(x, y) = 0
+            Next
+        Next
+        Dim maxEdges As Integer = (numNodes * (numNodes - 1) / 2)
+        Dim minEdges As Integer = numNodes - 1
+        numEdges = rand.Next(minEdges, maxEdges)
+        ReDim edges(numEdges - 1)
+        edges = GenerateEdges()
+
     End Sub
 
     Public Sub New(ByVal nodes() As Node, ByVal edges() As Edge)
         Me.nodes = nodes
         Me.edges = edges
         ReDim adjacencyMatrix(numNodes, numNodes)
+        numNodes = nodes.Length
+        numEdges = edges.Length
 
         Dim x, y As Integer
         For x = 0 To numNodes - 1
@@ -186,34 +190,66 @@ Public Class Graph
             Next
         Next
     End Sub
+    Public Function GenerateNodes(numNodes As Integer) As Node()
+        Dim nodes(numNodes - 1) As Node
+        Dim CoordinateMax As Integer = 200
+        For index As Integer = 0 To numNodes - 1
+            Dim coordinateX As Integer = GenRandCoord(CoordinateMax)
+            Dim coordinateY As Integer = GenRandCoord(CoordinateMax)
+            Dim thisNode As New Node(coordinateX, coordinateY)
+            nodes(index) = thisNode
+        Next
+        Return nodes
+    End Function
+    Public Function GenerateEdges() As Edge()
+        Dim sourceNodeIdx, destNodeIdx As Integer
+        Dim src, dest As Node
+        Dim nodeIndices As List(Of Integer)
 
-    Public Sub addNode(ByVal x As Integer, ByVal y As Integer)
+        'Something is wrong
+        ' once: 6 nodes 1 edge
+        For i As Integer = 0 To numEdges - 1
+            nodeIndices = Enumerable.Range(0, numNodes).ToList()
+            sourceNodeIdx = rand.Next(0, nodeIndices.Count)
+            nodeIndices.RemoveAt(sourceNodeIdx)
+            destNodeIdx = rand.Next(0, nodeIndices.Count)
+            nodeIndices.RemoveAt(destNodeIdx)
+            src = nodes(sourceNodeIdx)
+            dest = nodes(destNodeIdx)
+            edges(i) = New Edge(src, dest, GetDistanceToOrigin(src, dest), sourceNodeIdx, destNodeIdx)
+            AddEdgeToMatrix(edges(i))
+        Next
+
+        Return edges
+    End Function
+    Public Sub AddNode(ByVal x As Integer, ByVal y As Integer)
         ReDim nodes(nodes.Length)
         nodes(nodes.Length - 1) = New Node(x, y)
     End Sub
 
-    Private Sub addEdgeToMatrix(ByVal srcNodeIdx As Integer, ByVal destNodeIdx As Integer, weight As Integer)
-
-        adjacencyMatrix(srcNodeIdx, destNodeIdx) = weight
-        adjacencyMatrix(destNodeIdx, srcNodeIdx) = weight
+    Private Sub AddEdgeToMatrix(edge As Edge)
+        adjacencyMatrix(edge.getAIndex, edge.getBIndex) = 1
+        adjacencyMatrix(edge.getBIndex, edge.getAIndex) = 1
     End Sub
 
-    Public Sub setNodes(ByVal nodes() As Node)
-        Me.nodes = nodes
-    End Sub
+    Private Function GenRandCoord(ByVal MAX_NUM As Integer)
+        Return rand.Next(1, MAX_NUM)
+    End Function
 
-    Public Sub setEdges(ByVal edges() As Edge)
-        Me.edges = edges
+    Private Function GetDistanceToOrigin(origin As Node, thisNode As Node)
+        Return (((Math.Abs(thisNode.X - origin.X) ^ 2) + (Math.Abs(thisNode.Y - origin.Y) ^ 2)) ^ 2)
+    End Function
 
-        Dim i As Integer = 0
-        For Each edge In edges
-            addEdgeToMatrix(edges(i).getAIndex, edges(i).getBIndex, edges(i).getWeight)
-            i += 1
-        Next
-    End Sub
-
-    Private Function getAdjacentUnvisitedNode(ByVal node As Integer)
+    Private Function GetAdjacentUnvisitedNode(ByVal node As Node)
         Return node
+    End Function
+
+    Friend Function GetEdges() As IEnumerable(Of Object)
+        Return edges
+    End Function
+
+    Friend Function GetNodes() As IEnumerable(Of Object)
+        Return nodes
     End Function
 End Class
 
