@@ -1,7 +1,4 @@
-﻿Imports System.Drawing.Drawing2D
-Imports System.Drawing
-
-Public Class Dijkstra
+﻿Public Class Dijkstra
     Dim rand As New Random
     Dim myGraphics As Graphics = Me.CreateGraphics
     Private Sub DrawNode(ByVal thisNode As Node)
@@ -22,27 +19,26 @@ Public Class Dijkstra
 
     Private Sub BtnStart_Click(sender As Object, e As EventArgs) Handles BtnStart.Click
         BtnStart.Hide()
-        Dim numNodes As Integer = rand.Next(4, 10)
-
+        Dim numNodes As Integer = rand.Next(5, 20)
         Dim randomEdgeGraph As New Graph(numNodes)
 
-        For Each node In randomEdgeGraph.getNodes()
-            drawNode(node)
+        For Each node In randomEdgeGraph.GetNodes()
+            DrawNode(node)
         Next
         For Each edge In randomEdgeGraph.GetEdges()
             DrawEdge(edge, Color.Crimson, 2)
         Next
 
         ' Dijkstra's Algorithm
+        Dim D_alg As New Algorithm(randomEdgeGraph)
+        Dim D_sol As Integer() = D_alg.Dijkstra(0)
 
 
 
-
-        For Each edge In randomEdgeGraph.GetEdges()
-            'DrawEdge(edge, Color.CornflowerBlue, 4)
+        For Each i In D_sol
+            'DrawEdge(i, Color.CornflowerBlue, 4)
         Next
     End Sub
-
 
 
 
@@ -134,8 +130,8 @@ Public Class Graph
     Dim rand As New Random
     Private nodes() As Node
     Private edges() As Edge
-    Private adjacencyMatrix(,) As Double
-    Dim numNodes = 0
+    Private adjacencyMatrix(,) As Integer
+    Public numNodes = 0
     Dim numEdges = 0
 
     Public Sub New(ByVal numNodes As Integer)
@@ -213,7 +209,6 @@ Public Class Graph
             sourceNodeIdx = rand.Next(0, nodeIndices.Count)
             nodeIndices.RemoveAt(sourceNodeIdx)
             destNodeIdx = rand.Next(0, nodeIndices.Count)
-            nodeIndices.RemoveAt(destNodeIdx)
             src = nodes(sourceNodeIdx)
             dest = nodes(destNodeIdx)
             edges(i) = New Edge(src, dest, GetDistanceToOrigin(src, dest), sourceNodeIdx, destNodeIdx)
@@ -228,20 +223,16 @@ Public Class Graph
     End Sub
 
     Private Sub AddEdgeToMatrix(edge As Edge)
-        adjacencyMatrix(edge.getAIndex, edge.getBIndex) = 1
-        adjacencyMatrix(edge.getBIndex, edge.getAIndex) = 1
+        adjacencyMatrix(edge.getAIndex, edge.getBIndex) = edge.getWeight()
+        adjacencyMatrix(edge.getBIndex, edge.getAIndex) = edge.getWeight()
     End Sub
 
     Private Function GenRandCoord(ByVal MAX_NUM As Integer)
         Return rand.Next(1, MAX_NUM)
     End Function
 
-    Private Function GetDistanceToOrigin(origin As Node, thisNode As Node)
-        Return (((Math.Abs(thisNode.X - origin.X) ^ 2) + (Math.Abs(thisNode.Y - origin.Y) ^ 2)) ^ 2)
-    End Function
-
-    Private Function GetAdjacentUnvisitedNode(ByVal node As Node)
-        Return node
+    Private Function GetDistanceToOrigin(srcNode As Node, destNode As Node)
+        Return Math.Sqrt((Math.Abs(destNode.X - srcNode.X) ^ 2) + (Math.Abs(destNode.Y - srcNode.Y) ^ 2))
     End Function
 
     Friend Function GetEdges() As IEnumerable(Of Object)
@@ -251,7 +242,79 @@ Public Class Graph
     Friend Function GetNodes() As IEnumerable(Of Object)
         Return nodes
     End Function
-End Class
 
+    Friend Function GetAdjacencyMatrix() As Integer(,)
+        Return adjacencyMatrix
+    End Function
+End Class
+Public Class Algorithm
+    Private distance As Integer()
+    Private shortestPathTreeSet As Boolean()
+    Private adjacencyMatrix As Integer(,)
+    Private graph As Graph
+    Private numNodes = New Integer
+    Private nodeIndices = New Integer()
+
+    Public Sub New(ByVal graph As Graph)
+        Me.graph = graph
+        distance = New Integer(graph.numNodes - 1) {}
+        shortestPathTreeSet = New Boolean(graph.numNodes - 1) {}
+        adjacencyMatrix = graph.GetAdjacencyMatrix()
+        ReDim nodeIndices(graph.numNodes - 1)
+    End Sub
+
+    Public Function Dijkstra(source As Integer) As Integer()
+        numNodes = graph.numNodes
+        ' sptSet is all False from declaration
+        For i As Integer = 0 To numNodes - 1
+            distance(i) = Integer.MaxValue
+        Next
+
+        distance(source) = 0
+
+        For count As Integer = 0 To numNodes - 2
+            Dim MinDistIdx As Integer = MinimumDistance(distance, shortestPathTreeSet, numNodes)
+            shortestPathTreeSet(MinDistIdx) = True
+
+            For thisNode As Integer = 0 To numNodes - 1
+                If Not shortestPathTreeSet(thisNode) AndAlso Convert.ToBoolean(adjacencyMatrix(MinDistIdx, thisNode)) AndAlso distance(MinDistIdx) <> Integer.MaxValue AndAlso distance(MinDistIdx) + adjacencyMatrix(MinDistIdx, thisNode) < distance(thisNode) Then
+                    distance(thisNode) = distance(MinDistIdx) + adjacencyMatrix(MinDistIdx, thisNode)
+                    nodeIndices(thisNode) = MinDistIdx 'ERROR
+                End If
+            Next
+        Next
+
+        Print(distance, numNodes)
+        Return distance
+    End Function
+
+    Private Sub Print(distance As Integer(), numNodes As Integer)
+        Debug.WriteLine("Vertex    Distance from source")
+
+        For i As Integer = 0 To numNodes - 1
+            Debug.WriteLine("{0}" & vbTab & "  {1}", i, distance(i))
+        Next
+    End Sub
+
+
+    Private Function MinimumDistance(distance As Integer(), shortestPathTreeSet As Boolean(), numNodes As Integer) As Integer
+        Dim min As Integer = Integer.MaxValue
+        Dim minIndex As Integer = 0
+
+        For v As Integer = 0 To numNodes - 1
+            If shortestPathTreeSet(v) = False AndAlso distance(v) <= min Then
+                min = distance(v)
+                minIndex = v
+            End If
+        Next
+
+        Return minIndex
+    End Function
+
+    Public Function getAdjacencyMatrix()
+        Return adjacencyMatrix
+    End Function
+
+End Class
 
 
