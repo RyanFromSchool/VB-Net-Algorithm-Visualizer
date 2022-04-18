@@ -19,7 +19,7 @@
 
     Private Sub BtnStart_Click(sender As Object, e As EventArgs) Handles BtnStart.Click
         BtnStart.Hide()
-        Dim numNodes As Integer = rand.Next(5, 20)
+        Dim numNodes As Integer = rand.Next(5, 7)
         Dim randomEdgeGraph As New Graph(numNodes)
 
         For Each node In randomEdgeGraph.GetNodes()
@@ -31,12 +31,12 @@
 
         ' Dijkstra's Algorithm
         Dim D_alg As New Algorithm(randomEdgeGraph)
-        Dim D_sol As Integer() = D_alg.Dijkstra(0)
+        Dim D_sol As Edge() = D_alg.Dijkstra(0, randomEdgeGraph.GetNodes)
 
 
 
-        For Each i In D_sol
-            'DrawEdge(i, Color.CornflowerBlue, 4)
+        For index As Integer = 0 To D_sol.Length - 1
+            DrawEdge(D_sol(index), Color.CornflowerBlue, 4)
         Next
     End Sub
 
@@ -48,9 +48,9 @@ End Class
 Public Class Node
     Public X As Integer
     Public Y As Integer
-    Public visited As Boolean
+    Public _visited As Boolean
     Public Sub New(ByVal X As Integer, ByVal Y As Integer)
-        visited = False
+        _visited = False
         Me.X = X
         Me.Y = Y
     End Sub
@@ -65,15 +65,15 @@ Public Class Edge
         Me.A = New Node(0, 0)
         Me.B = New Node(0, 0)
         Me.weight = -1
-        Me.AIndex = 0
-        Me.BIndex = 0
+        Me.AIndex = -1
+        Me.BIndex = -1
     End Sub
     Public Sub New(ByVal A As Node, ByVal B As Node, ByVal weight As Double)
         Me.A = A
         Me.B = B
         Me.weight = weight
-        Me.AIndex = 0
-        Me.BIndex = 0
+        Me.AIndex = -1
+        Me.BIndex = -1
     End Sub
 
     Public Sub New(ByVal A As Node, ByVal B As Node, ByVal weight As Double, ByVal srcIndex As Integer, ByVal destIndex As Integer)
@@ -248,44 +248,63 @@ Public Class Graph
     End Function
 End Class
 Public Class Algorithm
-    Private distance As Integer()
-    Private shortestPathTreeSet As Boolean()
-    Private adjacencyMatrix As Integer(,)
+    Private distance() As Integer
+    Private solution(,) As Integer
+    Private shortestPathTreeSet() As Boolean
+    Private adjacencyMatrix(,) As Integer
     Private graph As Graph
-    Private numNodes = New Integer
-    Private nodeIndices = New Integer()
+    Private numNodes As New Integer
 
     Public Sub New(ByVal graph As Graph)
         Me.graph = graph
         distance = New Integer(graph.numNodes - 1) {}
         shortestPathTreeSet = New Boolean(graph.numNodes - 1) {}
         adjacencyMatrix = graph.GetAdjacencyMatrix()
-        ReDim nodeIndices(graph.numNodes - 1)
     End Sub
 
-    Public Function Dijkstra(source As Integer) As Integer()
+    Public Function Dijkstra(ByVal source As Integer, ByVal nodes() As Node) As Edge()
         numNodes = graph.numNodes
-        ' sptSet is all False from declaration
-        For i As Integer = 0 To numNodes - 1
-            distance(i) = Integer.MaxValue
-        Next
+        Dim sol_edges(graph.numNodes - 1) As Edge
+        Dim total_weight, min_index, col_index As Integer
+        Dim minDist As Integer
+        ' shortestPathTreeSet is all False by default
 
+        For weight As Integer = 0 To distance.Length - 1
+            distance(weight) = Integer.MaxValue
+        Next
         distance(source) = 0
 
-        For count As Integer = 0 To numNodes - 2
-            Dim MinDistIdx As Integer = MinimumDistance(distance, shortestPathTreeSet, numNodes)
-            shortestPathTreeSet(MinDistIdx) = True
+        For row As Integer = 0 To numNodes - 2
+            min_index = MinimumDistance(distance, shortestPathTreeSet, numNodes)
+            shortestPathTreeSet(min_index) = True
 
-            For thisNode As Integer = 0 To numNodes - 1
-                If Not shortestPathTreeSet(thisNode) AndAlso Convert.ToBoolean(adjacencyMatrix(MinDistIdx, thisNode)) AndAlso distance(MinDistIdx) <> Integer.MaxValue AndAlso distance(MinDistIdx) + adjacencyMatrix(MinDistIdx, thisNode) < distance(thisNode) Then
-                    distance(thisNode) = distance(MinDistIdx) + adjacencyMatrix(MinDistIdx, thisNode)
-                    nodeIndices(thisNode) = MinDistIdx 'ERROR
+            Dim solved_edge_index As Integer = 0
+            For col_index = 0 To numNodes - 1
+                total_weight = distance(minDist) + adjacencyMatrix(min_index, col_index)
+                If isUnvisitedNeighbor(min_index, col_index, total_weight) Then
+                    distance(col_index) = total_weight
+                    sol_edges(solved_edge_index) = New Edge(nodes(min_index), nodes(col_index), total_weight)
+                    solved_edge_index += 1
                 End If
+
             Next
         Next
+        sol_edges = RemoveFirstElement(sol_edges)
+
 
         Print(distance, numNodes)
-        Return distance
+        Return sol_edges
+    End Function
+
+    Private Function isUnvisitedNeighbor(min_index As Integer, col_index As Integer, total_weight As Integer) As Boolean
+        Return (Not shortestPathTreeSet(col_index) AndAlso Convert.ToBoolean(adjacencyMatrix(min_index, col_index)) AndAlso distance(min_index) <> Integer.MaxValue AndAlso total_weight < distance(col_index))
+    End Function
+
+    Private Function RemoveFirstElement(sol_edges() As Edge) As Edge()
+        Dim sol_edges_trimmed(sol_edges.Length - 2) As Edge
+        Array.Copy(sol_edges, 1, sol_edges_trimmed, 0, sol_edges.Length - 1)
+
+        Return sol_edges_trimmed
     End Function
 
     Private Sub Print(distance As Integer(), numNodes As Integer)
@@ -316,5 +335,4 @@ Public Class Algorithm
     End Function
 
 End Class
-
 
