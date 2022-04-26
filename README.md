@@ -11,3 +11,4 @@ This is an algorithm visualizer written in VB.net. It is a very simple program w
 * Red edges indicated a possible edge, Blue indicates that the edge is part of the solution
 * Sometimes a Node will generate with no edges assigned to it
 * Sometimes the source will not connect to any other nodes, so there will be no solution
+* For some reason Nodes generated past 200,200 are invisible, so nodes are generated within a 200x200 pixel square
