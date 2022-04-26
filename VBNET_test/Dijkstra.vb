@@ -1,29 +1,38 @@
 ﻿Public Class Dijkstra
     Dim rand As New Random
     Dim myGraphics As Graphics = Me.CreateGraphics
-    Private Sub DrawNode(ByVal thisNode As Node)
+    Private Sub DrawNode(ByVal thisNode As Node, ByVal color As Drawing.Color)
         Dim penNode As Pen
-        penNode = New Pen(Drawing.Color.Maroon, 20)
+        penNode = New Pen(color, 20)
         myGraphics.DrawRectangle(penNode, thisNode.X, thisNode.Y, 1, 1)
-        Threading.Thread.Sleep(150)
+        Threading.Thread.Sleep(100)
         penNode.Dispose()
     End Sub
 
     Private Sub DrawEdge(ByVal thisEdge As Edge, ByVal color As Drawing.Color, ByVal width As Integer)
         Dim penEdge As Pen
         penEdge = New Pen(color, width)
-        myGraphics.DrawLine(penEdge, x1:=thisEdge.getA().X, y1:=thisEdge.getA().Y, x2:=thisEdge.getB().X, y2:=thisEdge.getB().Y)
-        Threading.Thread.Sleep(100)
+        If Not IsNothing(thisEdge) Then
+            myGraphics.DrawLine(penEdge, x1:=thisEdge.getA().X, y1:=thisEdge.getA().Y, x2:=thisEdge.getB().X, y2:=thisEdge.getB().Y)
+        End If
+        Threading.Thread.Sleep(50)
         penEdge.Dispose()
     End Sub
 
     Private Sub BtnStart_Click(sender As Object, e As EventArgs) Handles BtnStart.Click
-        BtnStart.Hide()
+        'BtnStart.Hide()
+        Me.Refresh()
         Dim numNodes As Integer = rand.Next(5, 7)
         Dim randomEdgeGraph As New Graph(numNodes)
+        Dim nodes As Node() = randomEdgeGraph.GetNodes()
 
-        For Each node In randomEdgeGraph.GetNodes()
-            DrawNode(node)
+        For Each node In nodes
+            If node.Equals(nodes(0)) Then
+                DrawNode(node, Color.SeaGreen)
+            Else
+                DrawNode(node, Color.Maroon)
+            End If
+
         Next
         For Each edge In randomEdgeGraph.GetEdges()
             DrawEdge(edge, Color.Crimson, 2)
@@ -36,7 +45,9 @@
 
 
         For index As Integer = 0 To D_sol.Length - 1
-            DrawEdge(D_sol(index), Color.CornflowerBlue, 4)
+            If Not (IsNothing(index)) Then
+                DrawEdge(D_sol(index), Color.CornflowerBlue, 4)
+            End If
         Next
     End Sub
 
@@ -48,9 +59,7 @@ End Class
 Public Class Node
     Public X As Integer
     Public Y As Integer
-    Public _visited As Boolean
     Public Sub New(ByVal X As Integer, ByVal Y As Integer)
-        _visited = False
         Me.X = X
         Me.Y = Y
     End Sub
@@ -249,7 +258,6 @@ Public Class Graph
 End Class
 Public Class Algorithm
     Private distance() As Integer
-    Private solution(,) As Integer
     Private shortestPathTreeSet() As Boolean
     Private adjacencyMatrix(,) As Integer
     Private graph As Graph
@@ -269,54 +277,35 @@ Public Class Algorithm
         Dim minDist As Integer
         ' shortestPathTreeSet is all False by default
 
-        For weight As Integer = 0 To distance.Length - 1
-            distance(weight) = Integer.MaxValue
+        For i As Integer = 0 To distance.Length - 1
+            distance(i) = Integer.MaxValue
         Next
         distance(source) = 0
 
         For row As Integer = 0 To numNodes - 2
-            min_index = MinimumDistance(distance, shortestPathTreeSet, numNodes)
+            min_index = findMinimumDistIndex(distance, shortestPathTreeSet, numNodes)
             shortestPathTreeSet(min_index) = True
 
-            Dim solved_edge_index As Integer = 0
             For col_index = 0 To numNodes - 1
                 total_weight = distance(minDist) + adjacencyMatrix(min_index, col_index)
                 If isUnvisitedNeighbor(min_index, col_index, total_weight) Then
                     distance(col_index) = total_weight
-                    sol_edges(solved_edge_index) = New Edge(nodes(min_index), nodes(col_index), total_weight)
-                    solved_edge_index += 1
+                    sol_edges(col_index) = New Edge(nodes(min_index), nodes(col_index), total_weight, min_index, col_index)
                 End If
 
             Next
         Next
-        sol_edges = RemoveFirstElement(sol_edges)
 
-
-        Print(distance, numNodes)
         Return sol_edges
     End Function
 
     Private Function isUnvisitedNeighbor(min_index As Integer, col_index As Integer, total_weight As Integer) As Boolean
-        Return (Not shortestPathTreeSet(col_index) AndAlso Convert.ToBoolean(adjacencyMatrix(min_index, col_index)) AndAlso distance(min_index) <> Integer.MaxValue AndAlso total_weight < distance(col_index))
+        Return (Not shortestPathTreeSet(col_index) AndAlso Convert.ToBoolean(adjacencyMatrix(min_index, col_index)) AndAlso distance(min_index) <> Integer.MaxValue AndAlso distance(min_index) + adjacencyMatrix(min_index, col_index) < distance(col_index)) 'AndAlso total_weight < distance(col_index))
     End Function
 
-    Private Function RemoveFirstElement(sol_edges() As Edge) As Edge()
-        Dim sol_edges_trimmed(sol_edges.Length - 2) As Edge
-        Array.Copy(sol_edges, 1, sol_edges_trimmed, 0, sol_edges.Length - 1)
-
-        Return sol_edges_trimmed
-    End Function
-
-    Private Sub Print(distance As Integer(), numNodes As Integer)
-        Debug.WriteLine("Vertex    Distance from source")
-
-        For i As Integer = 0 To numNodes - 1
-            Debug.WriteLine("{0}" & vbTab & "  {1}", i, distance(i))
-        Next
-    End Sub
 
 
-    Private Function MinimumDistance(distance As Integer(), shortestPathTreeSet As Boolean(), numNodes As Integer) As Integer
+    Private Function findMinimumDistIndex(distance As Integer(), shortestPathTreeSet As Boolean(), numNodes As Integer) As Integer
         Dim min As Integer = Integer.MaxValue
         Dim minIndex As Integer = 0
 
